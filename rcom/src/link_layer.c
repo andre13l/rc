@@ -34,7 +34,7 @@ int fd;
 #define CTRL_DATA(S) (S%2?0b01000000:0b00000000)
 #define PACKET_SIZE_LIMIT 256
 unsigned char alarmcount=0;
-bool alarmenabled =FALSE;
+_Bool alarmenabled =FALSE;
 unsigned char buf[256];
 
 
@@ -43,7 +43,7 @@ void alarmHandler(int signal){
     alarmenabled =FALSE;
 }
 
-void trama(unsigned char * array, unsigned char C, unsigned char A,unsigned char* data,unsigned char bcc2,unsigned int size)
+int trama(unsigned char * array, unsigned char C, unsigned char A,unsigned char* data,unsigned char bcc2,unsigned int size)
 {
 	array[0] = FLAG;
 	array[1] = A;
@@ -81,7 +81,7 @@ unsigned char recebeTrama(int fd)
 				break;
 
 			case 1: //expecting A
-				if(car == ADR_RX || car = ADR_TX)
+				if(car == ADR_RX || car == ADR_TX)
 					state = 2;
 
 				else if(car != FLAG)
@@ -107,7 +107,7 @@ unsigned char recebeTrama(int fd)
 				break;
 
 			case 3: //expecting BCC
-				if(car == (A^Cverif))
+				if(car == (ADR_TX^Cverif))
 					state = 4;
 
 				else
@@ -189,8 +189,8 @@ int llopen(LinkLayer connectionParameters)
 
     switch(new.role)
     {
-      case LlTx:
-        bool ua_rec = FALSE;
+      case LlTx: ;
+        int ua_rec = 0;
         while (tries<new.nRetransmissions && !ua_rec)
         {
           alarm(new.timeout);
@@ -198,25 +198,27 @@ int llopen(LinkLayer connectionParameters)
           int send = trama(buf,CTRL_SET,ADR_TX,NULL,0,0);
           write(fd,buf,send);
           printf("SET just sent\n");
-          while(alarmenabled && !ua_rec){
+          while(1){
+                printf("fasd");
                 int answer = read(fd,buf,PACKET_SIZE_LIMIT);
-                if(answer<0)
-                    return -1;
-					printf("morreu");
+                printf("aaa");
+                if(answer<0){
+                	printf("morreu\n");
+                    return -1;}
                 if(recebeTrama(fd) == CTRL_UA){
-                  printf("UA received");
-                  ua_rec=TRUE;
+                  printf("UA received\n");
+                  ua_rec=1;
                   return 1;
                 }
             }
         }
         break;
-      case LlRx:
+      case LlRx: ;
         if(recebeTrama(fd)==CTRL_SET){
-          printf("SET received");
+          printf("SET received\n");
           int send_back=trama(buf,CTRL_UA,ADR_RX,NULL,0,0);
           write(fd,buf,send_back);
-          printf("UA just sent");
+          printf("UA just sent\n");
           return 1;
         }
         break;
@@ -252,7 +254,9 @@ int llwrite(const unsigned char *buf, int bufSize)
 
   bigbuf[sizemsg-2]=BBC2;
   bigbuf[sizemsg-1]=FLAG;
-
+  
+  
+  printf("%d bytes read",sizemsg);
 return sizemsg;
 
 }
@@ -262,7 +266,7 @@ return sizemsg;
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    while( state != 5 )
+    /* while( state != 5 )
 	{
     res = read(fd,&car,1);
     if( res < 0)
@@ -326,14 +330,14 @@ int llread(unsigned char *packet)
 
 				break;
 		}
-	}
+	}*/
   return 0;
 }
 
 /* O REJ que é esperado
  * 
  */
-unsigned char correctREJ(unsigned char var)	
+/*unsigned char correctREJ(unsigned char var)	
 {
   if( var == C00 )
     return REJ1;
@@ -345,14 +349,14 @@ unsigned char correctREJ(unsigned char var)
 /* O RR que é esperado
  * 
  */
-unsigned char correctRR(unsigned char var)
+/*unsigned char correctRR(unsigned char var)
 {
   if(var == C00)
     return RR1;
 
 	else
     return RR0;
-}
+}*/
 
 ////////////////////////////////////////////////
 // LLCLOSE
