@@ -43,20 +43,14 @@ void alarmHandler(int signal){
     alarmenabled =FALSE;
 }
 
-int trama(unsigned char * array, unsigned char C, unsigned char A,unsigned char* data,unsigned char bcc2,unsigned int size)
+int trama(unsigned char * array, unsigned char A, unsigned char C)
 {
 	array[0] = FLAG;
 	array[1] = A;
 	array[2] = C;
-	array[3] = array[1]^array[2];
-	if(data==NULL){
-        array[4]= FLAG;
-        return 5;
-    }
-    memcpy(buf+4,data,size);
-    array[4+size]=bcc2;
-    array[5+size]=FLAG;
-    return 6+size;
+	array[3] = A^C;
+    array[4] = FLAG;
+    return 5;
 }
 
 unsigned char recebeTrama(int fd)
@@ -187,18 +181,17 @@ int llopen(LinkLayer connectionParameters)
     int tries=0;
     signal(SIGALRM,alarmHandler);
 
-    switch(new.role)
-    {
-      case LlTx: ;
+    
+      if(new.role==LlTx){
         int ua_rec = 0;
         while (tries<new.nRetransmissions && !ua_rec)
         {
           alarm(new.timeout);
           alarmenabled=TRUE;
-          int send = trama(buf,CTRL_SET,ADR_TX,NULL,0,0);
+          int send = trama(buf,ADR_TX,CTRL_SET);
           write(fd,buf,send);
           printf("SET just sent\n");
-          while(1){
+          while(alarmenabled && !ua_rec){
                 printf("fasd");
                 int answer = read(fd,buf,PACKET_SIZE_LIMIT);
                 printf("aaa");
@@ -212,20 +205,21 @@ int llopen(LinkLayer connectionParameters)
                 }
             }
         }
-        break;
-      case LlRx: ;
+		}
+        
+      if(new.role==LlRx){
         if(recebeTrama(fd)==CTRL_SET){
           printf("SET received\n");
-          int send_back=trama(buf,CTRL_UA,ADR_RX,NULL,0,0);
+          int send_back=trama(buf,ADR_TX,CTRL_UA);
           write(fd,buf,send_back);
           printf("UA just sent\n");
           return 1;
         }
-        break;
+        
     }       
     return -1;
-}
 
+}
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
@@ -242,7 +236,7 @@ unsigned char BCC2_ver(unsigned char *arr, int size)
 int llwrite(const unsigned char *buf, int bufSize)
 {
   int sizemsg=bufSize+6;
-  unsigned char bigbuf[sizemsg];
+  unsigned char *bigbuf = (unsigned char *)malloc(sizeof(unsigned char) * (size+6));
 
   bigbuf[0]=FLAG;
   bigbuf[1]=ADR_TX;
@@ -274,60 +268,46 @@ int llread(unsigned char *packet)
       printf("Read falhou.\n");
       return FALSE;
   	}
-
 		switch(state)
 		{
 			case 0: //expecting flag
 				if(car == FLAG)
 					state = 1;
 				break;
-
 			case 1: //expecting A
 				if(car == ADR_RX || car = ADR_TX)
 					state = 2;
-
 				else if(car != FLAG)
 				{
 					state = 0;
 				}
-
 				break;
-
 			case 2: //expecting Cverif
 				Cverif = car;
 				if(car == CTRL_UA || car == CTRL_DISC || car == CTRL_SET)
 					state = 3;
-
 				else if(car != FLAG)
 				{
 					state = 1;
 				}
-
 				else
 					state = 0;
-
 				break;
-
 			case 3: //expecting BCC
 				if(car == (A^Cverif))
 					state = 4;
-
 				else
 				{
 					state = 0;
 				}
-
 				break;
-
 			case 4: //expecting FLAG
 				if(car == FLAG)
 					state = 5;
-
 				else
 				{
 					state = 0;
 				}
-
 				break;
 		}
 	}*/
@@ -341,11 +321,9 @@ int llread(unsigned char *packet)
 {
   if( var == C00 )
     return REJ1;
-
 	else
     return REJ0;
 }
-
 /* O RR que é esperado
  * 
  */
@@ -353,7 +331,6 @@ int llread(unsigned char *packet)
 {
   if(var == C00)
     return RR1;
-
 	else
     return RR0;
 }*/
