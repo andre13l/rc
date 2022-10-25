@@ -393,7 +393,12 @@ int llwrite(const unsigned char *buffer, int bufSize)
             }
         }
     }
-    flag_dados = flag_dados?0:1;
+    if(flag_dados==0){
+                        flag_dados=1;
+                    }
+                    else{
+                        flag_dados=0;
+                    }
     return 0;
 }
 
